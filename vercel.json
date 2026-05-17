@@ -1,8 +1,8 @@
 {
   "version": 2,
   "framework": null,
-  "buildCommand": "mkdir -p dist",
-  "outputDirectory": "dist",
+  "buildCommand": "echo 'No build needed'",
+  "outputDirectory": "public",
   "functions": {
     "api/index.php": {
       "runtime": "vercel-php@0.7.2"
