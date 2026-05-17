@@ -26,6 +26,13 @@ foreach (['logs', 'framework/cache/data', 'framework/sessions', 'framework/views
     }
 }
 
+// Vercel routes all traffic to api/index.php, so SCRIPT_NAME is
+// /api/index.php. Symfony's request parser strips the /api/ directory
+// prefix from REQUEST_URI, making Laravel see /me instead of /api/me.
+// Override to an empty base so the full URI is used as the path.
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['PHP_SELF']    = '/index.php';
+
 $app = require_once __DIR__ . '/../bootstrap/app.php';
 $app->useBootstrapPath('/tmp/bootstrap');
 $app->useStoragePath($tmpStorage);
