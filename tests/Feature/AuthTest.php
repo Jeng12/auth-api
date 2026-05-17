@@ -97,4 +97,25 @@ class AuthTest extends TestCase
         $this->postJson('/api/logout')->assertStatus(401);
         $this->postJson('/api/email/verify', ['otp' => '123456'])->assertStatus(401);
     }
+
+    public function test_unverified_user_blocked_from_verified_routes(): void
+    {
+        $user  = User::factory()->unverified()->create();
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        $response = $this->withToken($token)->getJson('/api/account');
+
+        $response->assertStatus(403);
+    }
+
+    public function test_verified_user_can_access_verified_routes(): void
+    {
+        $user  = User::factory()->create();
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        $response = $this->withToken($token)->getJson('/api/account');
+
+        $response->assertStatus(200)
+            ->assertJson(['id' => $user->id, 'email' => $user->email]);
+    }
 }

@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
@@ -37,5 +38,10 @@ class User extends Authenticatable
             'otp_verified_at'   => 'datetime',
             'password'          => 'hashed',
         ];
+    }
+
+    // OTPController::sendOtp() handles the verification email via the OTP flow.
+    public function sendEmailVerificationNotification(): void
+    {
     }
 }
