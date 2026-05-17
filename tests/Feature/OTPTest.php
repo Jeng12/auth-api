@@ -89,4 +89,22 @@ class OTPTest extends TestCase
 
         $response->assertStatus(429);
     }
+
+    public function test_unverified_user_is_blocked_from_verified_routes(): void
+    {
+        [$user, $token] = $this->userWithOtp();
+
+        $this->withToken($token)->getJson('/api/verified-ping')->assertStatus(403);
+    }
+
+    public function test_verified_user_can_access_verified_routes(): void
+    {
+        $user = User::factory()->create([
+            'otp_verified_at'   => now(),
+            'email_verified_at' => now(),
+        ]);
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        $this->withToken($token)->getJson('/api/verified-ping')->assertStatus(200);
+    }
 }
