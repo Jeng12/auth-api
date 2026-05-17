@@ -2,15 +2,19 @@
 
 define('LARAVEL_START', microtime(true));
 
+// On Vercel, SCRIPT_NAME is /api/index.php. Symfony subtracts its directory
+// (/api) when computing the request path, turning /api/me into just 'me'.
+// Pretend the entry point is at the root so no prefix gets stripped.
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['PHP_SELF']    = '/index.php';
+
 require __DIR__ . '/../vendor/autoload.php';
 
-// Vercel serverless has a read-only filesystem.
-// Create writable directories in /tmp and redirect Laravel to them.
+// Vercel serverless has a read-only filesystem. Create writable dirs in /tmp.
 $tmpBootstrapCache = '/tmp/bootstrap/cache';
 if (!is_dir($tmpBootstrapCache)) {
     mkdir($tmpBootstrapCache, 0755, true);
 }
-// Seed /tmp with any pre-generated package manifests from the bundle.
 foreach (glob(__DIR__ . '/../bootstrap/cache/*.php') as $f) {
     $dest = $tmpBootstrapCache . '/' . basename($f);
     if (!file_exists($dest)) {
