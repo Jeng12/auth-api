@@ -20,9 +20,9 @@ try {
     $app->useStoragePath($tmpStorage);
 
     $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-
-    // Bootstrap the app (registers service providers, loads routes, etc.)
     $kernel->bootstrap();
+
+    $request = Illuminate\Http\Request::capture();
 
     $router = $app->make(Illuminate\Routing\Router::class);
     $routes = [];
@@ -32,9 +32,13 @@ try {
 
     header('Content-Type: application/json');
     echo json_encode([
-        'bootstrap_cache_contents' => array_map('basename', glob('/tmp/bootstrap/cache/*.php') ?: []),
-        'route_count' => count($routes),
-        'routes' => $routes,
+        'REQUEST_URI'   => $_SERVER['REQUEST_URI'] ?? null,
+        'PATH_INFO'     => $_SERVER['PATH_INFO'] ?? null,
+        'SCRIPT_NAME'   => $_SERVER['SCRIPT_NAME'] ?? null,
+        'laravel_path'  => $request->path(),
+        'laravel_url'   => $request->url(),
+        'route_count'   => count($routes),
+        'routes'        => $routes,
     ]);
 } catch (\Throwable $e) {
     header('Content-Type: application/json');
