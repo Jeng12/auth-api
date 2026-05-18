@@ -1,0 +1,361 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "auth-api",
+    "version": "1.0.0",
+    "description": "Stateless JSON authentication API built on Laravel 13 + Sanctum, deployed on Vercel with Supabase Postgres. Token-based auth via Bearer headers (no cookies / sessions). OTP-based email verification.\n\n**Auth model**\n\n1. `POST /api/register` → returns a bearer token usable immediately for `/api/me` and OTP endpoints.\n2. A 6-digit OTP is emailed via Resend (`onboarding@resend.dev` for now). It expires in 10 minutes.\n3. `POST /api/email/verify` stamps `email_verified_at` and unlocks routes guarded by the `verified` middleware (e.g. `/api/account`).\n4. `POST /api/login` issues a fresh token. `POST /api/logout` revokes the current token.\n\n**Rate limits**\n\n- `POST /api/login`: 5 requests / minute / IP\n- `POST /api/email/resend-otp`: 3 requests / 60s / user",
+    "contact": {
+      "name": "auth-api source",
+      "url": "https://github.com/Jeng12/auth-api"
+    },
+    "license": { "name": "MIT" }
+  },
+  "servers": [
+    { "url": "https://auth-api-two-theta.vercel.app", "description": "Production" }
+  ],
+  "tags": [
+    { "name": "Health", "description": "Liveness probe" },
+    { "name": "Auth",   "description": "Register / login / logout / current user" },
+    { "name": "OTP",    "description": "Email verification via 6-digit code" },
+    { "name": "Account","description": "Routes that require a verified email" }
+  ],
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/up": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Liveness probe",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Application is up. Returns an HTML status page (`text/html`).",
+            "content": { "text/html": {} }
+          }
+        }
+      }
+    },
+    "/api/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user",
+        "description": "Creates a user, sends a 6-digit OTP to the supplied email, and returns a bearer token. The token is usable immediately even before the email is verified.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created; OTP dispatched.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed (e.g. duplicate email, weak password).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log in with email + password",
+        "description": "Returns a fresh bearer token on success. Rate-limited to 5 attempts per minute per IP.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "example": { "message": "Invalid credentials." }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationError" }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many login attempts.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Revoke the current bearer token",
+        "responses": {
+          "200": {
+            "description": "Token revoked.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "example": { "message": "Logged out successfully." }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get the authenticated user",
+        "description": "Available to any authenticated user, verified or not. Use this to inspect `email_verified_at` and decide whether to prompt for OTP.",
+        "responses": {
+          "200": {
+            "description": "User resource.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" }
+        }
+      }
+    },
+    "/api/email/verify": {
+      "post": {
+        "tags": ["OTP"],
+        "summary": "Verify the email with a 6-digit OTP",
+        "description": "On success, stamps `otp_verified_at` and `email_verified_at` on the user, clears the OTP, and unlocks the `verified` routes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OtpRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["message", "user"],
+                  "properties": {
+                    "message": { "type": "string", "example": "Email verified successfully." },
+                    "user":    { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Invalid OTP, expired OTP, or email already verified.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "examples": {
+                  "invalid":          { "value": { "message": "Invalid OTP." } },
+                  "expired":          { "value": { "message": "OTP has expired." } },
+                  "alreadyVerified":  { "value": { "message": "Email already verified." } },
+                  "validation":       { "value": { "message": "The otp field is required.", "errors": { "otp": ["The otp field is required."] } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/email/resend-otp": {
+      "post": {
+        "tags": ["OTP"],
+        "summary": "Resend a fresh 6-digit OTP",
+        "description": "Regenerates the OTP and emails it. Rate-limited to 3 attempts per 60 seconds per user.",
+        "responses": {
+          "200": {
+            "description": "New OTP sent.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "example": { "message": "OTP resent successfully." }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "422": {
+            "description": "Email is already verified.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "example": { "message": "Email already verified." }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many resend attempts. Response includes seconds until next attempt.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "example": { "message": "Too many requests. Try again in 47 seconds." }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account": {
+      "get": {
+        "tags": ["Account"],
+        "summary": "Authenticated user (verified email only)",
+        "description": "Same payload shape as `/api/me`, but gated by the `verified` middleware. Returns 403 if the user has not completed OTP verification.",
+        "responses": {
+          "200": {
+            "description": "Verified user resource.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": {
+            "description": "Email not verified.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "example": { "message": "Your email address is not verified." }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Sanctum personal access token",
+        "description": "Issue a token via `POST /api/register` or `POST /api/login`, then send it as `Authorization: Bearer <token>` on subsequent requests."
+      }
+    },
+    "responses": {
+      "Unauthenticated": {
+        "description": "Missing or invalid bearer token.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/MessageResponse" },
+            "example": { "message": "Unauthenticated." }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "required": ["id", "name", "email", "created_at"],
+        "properties": {
+          "id":                { "type": "integer", "example": 42 },
+          "name":              { "type": "string",  "example": "Jane Doe" },
+          "email":             { "type": "string",  "format": "email", "example": "jane@example.com" },
+          "email_verified_at": { "type": "string",  "format": "date-time", "nullable": true, "example": "2026-05-18T01:23:45.000000Z" },
+          "created_at":        { "type": "string",  "format": "date-time", "example": "2026-05-17T14:00:00.000000Z" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "required": ["user", "token"],
+        "properties": {
+          "user":  { "$ref": "#/components/schemas/User" },
+          "token": { "type": "string", "example": "1|abcDEF123ghiJKL456mnoPQR789stuVWX0yz" }
+        }
+      },
+      "MessageResponse": {
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+          "message": { "type": "string" },
+          "errors":  {
+            "type": "object",
+            "additionalProperties": { "type": "array", "items": { "type": "string" } },
+            "description": "Optional field-level errors (present on validation failures)."
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": ["message", "errors"],
+        "properties": {
+          "message": { "type": "string", "example": "The email has already been taken." },
+          "errors": {
+            "type": "object",
+            "additionalProperties": { "type": "array", "items": { "type": "string" } },
+            "example": { "email": ["The email has already been taken."] }
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["name", "email", "password", "password_confirmation"],
+        "properties": {
+          "name":                  { "type": "string", "maxLength": 255, "example": "Jane Doe" },
+          "email":                 { "type": "string", "format": "email", "maxLength": 255, "example": "jane@example.com" },
+          "password":              { "type": "string", "format": "password", "minLength": 8, "example": "Password1!", "description": "Must satisfy Laravel's default password rules (min 8 chars)." },
+          "password_confirmation": { "type": "string", "format": "password", "example": "Password1!", "description": "Must match `password`." }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email":    { "type": "string", "format": "email",    "example": "jane@example.com" },
+          "password": { "type": "string", "format": "password", "example": "Password1!" }
+        }
+      },
+      "OtpRequest": {
+        "type": "object",
+        "required": ["otp"],
+        "properties": {
+          "otp": { "type": "string", "minLength": 6, "maxLength": 6, "pattern": "^[0-9]{6}$", "example": "123456" }
+        }
+      }
+    }
+  }
+}

@@ -44,6 +44,8 @@ All requests enter via `api/index.php` (the Vercel serverless entry point), whic
 | POST | `/api/email/verify` | `auth:sanctum` |
 | POST | `/api/email/resend-otp` | `auth:sanctum` |
 | GET | `/api/account` | `auth:sanctum`, `verified` |
+| GET | `/docs` | — (Redoc viewer) |
+| GET | `/openapi.json` | — (OpenAPI 3.1 spec) |
 
 ### OTP flow
 
