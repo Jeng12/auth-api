@@ -1,0 +1,139 @@
+{
+  "info": {
+    "name": "auth-api (Vercel + Supabase)",
+    "_postman_id": "auth-api-prod-collection",
+    "description": "End-to-end smoke + usage collection for the Laravel auth API.\n\nBase URL: https://auth-api-two-theta.vercel.app\n\nFlow:\n1. Register → receive bearer token (`{{token}}`).\n2. /me → confirms identity (works even before email verify).\n3. /account → 403 until email is verified.\n4. /email/verify with the 6-digit OTP (delivered via Resend, or read from Supabase).\n5. /account → 200 after verify.\n6. /login → fresh token.\n7. /logout → revokes the token.\n\nVariables:\n- baseUrl: production API origin\n- email / password: credentials used by Register/Login\n- token: filled in by the Register and Login requests via test scripts",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://auth-api-two-theta.vercel.app" },
+    { "key": "email", "value": "smoketest@example.com" },
+    { "key": "password", "value": "Password1!" },
+    { "key": "token", "value": "" },
+    { "key": "otp", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health: GET /up",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/up", "host": ["{{baseUrl}}"], "path": ["up"] }
+      }
+    },
+    {
+      "name": "Register: POST /api/register",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.token) { pm.collectionVariables.set('token', data.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Smoke Test\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"password_confirmation\": \"{{password}}\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/register", "host": ["{{baseUrl}}"], "path": ["api", "register"] }
+      }
+    },
+    {
+      "name": "Me: GET /api/me",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/me", "host": ["{{baseUrl}}"], "path": ["api", "me"] }
+      }
+    },
+    {
+      "name": "Account (verified-only): GET /api/account",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/account", "host": ["{{baseUrl}}"], "path": ["api", "account"] }
+      }
+    },
+    {
+      "name": "Email Verify: POST /api/email/verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{otp}}\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/email/verify", "host": ["{{baseUrl}}"], "path": ["api", "email", "verify"] }
+      }
+    },
+    {
+      "name": "Email Resend: POST /api/email/resend-otp",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/email/resend-otp", "host": ["{{baseUrl}}"], "path": ["api", "email", "resend-otp"] }
+      }
+    },
+    {
+      "name": "Login: POST /api/login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.token) { pm.collectionVariables.set('token', data.token); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/login", "host": ["{{baseUrl}}"], "path": ["api", "login"] }
+      }
+    },
+    {
+      "name": "Logout: POST /api/logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/logout", "host": ["{{baseUrl}}"], "path": ["api", "logout"] }
+      }
+    }
+  ]
+}
