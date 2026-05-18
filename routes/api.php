@@ -13,4 +13,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/email/verify', [OTPController::class, 'verify']);
     Route::post('/email/resend-otp', [OTPController::class, 'resend']);
+
+    Route::middleware('verified')->group(function () {
+        Route::get('/account', [AuthController::class, 'me']);
+    });
 });

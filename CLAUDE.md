@@ -43,6 +43,7 @@ All requests enter via `api/index.php` (the Vercel serverless entry point), whic
 | GET | `/api/me` | `auth:sanctum` |
 | POST | `/api/email/verify` | `auth:sanctum` |
 | POST | `/api/email/resend-otp` | `auth:sanctum` |
+| GET | `/api/account` | `auth:sanctum`, `verified` |
 
 ### OTP flow
 
@@ -53,7 +54,7 @@ On registration, `OTPController::sendOtp()` is called directly (not via a queued
 - `app/Http/Controllers/AuthController.php` — register, login, logout, me
 - `app/Http/Controllers/OTPController.php` — verify, resend (+ static `sendOtp` helper)
 - `app/Http/Resources/UserResource.php` — consistent user response shape
-- `app/Models/User.php` — includes `HasApiTokens`; OTP columns in `$fillable` and `$casts`
+- `app/Models/User.php` — implements `MustVerifyEmail`; includes `HasApiTokens`; OTP columns in `$fillable` and `$casts`
 - `config/cors.php` — driven by `CORS_ALLOWED_ORIGINS` env var (comma-separated)
 - `config/sanctum.php` — token expiry driven by `SANCTUM_TOKEN_EXPIRATION` (minutes, default 10080 = 7 days)
 - `vercel.json` — routes all traffic to `api/index.php`; requires `outputDirectory: dist`
