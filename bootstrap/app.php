@@ -18,14 +18,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->report(function (\Throwable $e) {
+        $exceptions->render(function (\Throwable $e, Request $request) {
             fwrite(STDERR, sprintf(
-                "[DIAG] %s: %s @ %s:%d\n",
+                "[DIAG] %s on %s %s: %s @ %s:%d\n",
                 get_class($e),
+                $request->method(),
+                $request->path(),
                 $e->getMessage(),
                 $e->getFile(),
                 $e->getLine()
             ));
+            return null;
         });
 
         $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
