@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,30 +20,31 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Throwable $e, Request $request) {
-            fwrite(STDERR, sprintf(
-                "[DIAG] %s on %s %s: %s @ %s:%d\n",
-                get_class($e),
-                $request->method(),
-                $request->path(),
-                $e->getMessage(),
-                $e->getFile(),
-                $e->getLine()
-            ));
-            return null;
-        });
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
 
-        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
-            if ($request->is('api/*')) {
+            if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
                 return response()->json([
                     'message' => $e->getMessage(),
                     'errors'  => $e->errors(),
                 ], 422);
             }
-        });
 
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json(['message' => 'Unauthenticated.'], 401);
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
+                return response()->json(
+                    ['message' => $e->getMessage() ?: Response::$statusTexts[$e->getStatusCode()] ?? 'Error.'],
+                    $e->getStatusCode()
+                );
             }
+
+            return response()->json(
+                ['message' => config('app.debug') ? $e->getMessage() : 'Server Error.'],
+                500
+            );
         });
     })->create();
