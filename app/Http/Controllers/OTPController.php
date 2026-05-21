@@ -35,9 +35,9 @@ class OTPController extends Controller
         }
 
         $user->update([
-            'otp'              => null,
-            'otp_expires_at'   => null,
-            'otp_verified_at'  => now(),
+            'otp' => null,
+            'otp_expires_at' => null,
+            'otp_verified_at' => now(),
             'email_verified_at' => now(),
         ]);
 
@@ -53,7 +53,7 @@ class OTPController extends Controller
             return response()->json(['message' => 'Email already verified.'], 422);
         }
 
-        $key = 'otp-resend:' . $user->id;
+        $key = 'otp-resend:'.$user->id;
 
         if (RateLimiter::tooManyAttempts($key, maxAttempts: 3)) {
             $seconds = RateLimiter::availableIn($key);
@@ -75,12 +75,12 @@ class OTPController extends Controller
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $user->update([
-            'otp'            => $otp,
+            'otp' => $otp,
             'otp_expires_at' => now()->addMinutes(self::OTP_TTL_MINUTES),
         ]);
 
         Mail::raw(
-            "Your verification code is: {$otp}\n\nThis code expires in " . self::OTP_TTL_MINUTES . " minutes.",
+            "Your verification code is: {$otp}\n\nThis code expires in ".self::OTP_TTL_MINUTES.' minutes.',
             function ($message) use ($user) {
                 $message->to($user->email)->subject('Verify your email address');
             }

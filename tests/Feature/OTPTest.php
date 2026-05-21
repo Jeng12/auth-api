@@ -14,7 +14,7 @@ class OTPTest extends TestCase
     private function userWithOtp(array $overrides = []): array
     {
         $user = User::factory()->create(array_merge([
-            'otp'            => '123456',
+            'otp' => '123456',
             'otp_expires_at' => now()->addMinutes(10),
         ], $overrides));
 
@@ -49,8 +49,8 @@ class OTPTest extends TestCase
     public function test_already_verified_user_cannot_verify_again(): void
     {
         $user = User::factory()->create([
-            'otp'             => '123456',
-            'otp_expires_at'  => now()->addMinutes(10),
+            'otp' => '123456',
+            'otp_expires_at' => now()->addMinutes(10),
             'otp_verified_at' => now(),
         ]);
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -79,7 +79,7 @@ class OTPTest extends TestCase
     {
         [$user, $token] = $this->userWithOtp();
 
-        RateLimiter::clear('otp-resend:' . $user->id);
+        RateLimiter::clear('otp-resend:'.$user->id);
 
         for ($i = 0; $i < 3; $i++) {
             $this->withToken($token)->postJson('/api/email/resend-otp')->assertStatus(200);

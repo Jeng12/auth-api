@@ -34,14 +34,12 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
-            'otp_expires_at'    => 'datetime',
-            'otp_verified_at'   => 'datetime',
-            'password'          => 'hashed',
+            'otp_expires_at' => 'datetime',
+            'otp_verified_at' => 'datetime',
+            'password' => 'hashed',
         ];
     }
 
     // OTPController::sendOtp() handles the verification email via the OTP flow.
-    public function sendEmailVerificationNotification(): void
-    {
-    }
+    public function sendEmailVerificationNotification(): void {}
 }

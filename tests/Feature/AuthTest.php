@@ -13,9 +13,9 @@ class AuthTest extends TestCase
     public function test_register_creates_user_and_returns_token(): void
     {
         $response = $this->postJson('/api/register', [
-            'name'                  => 'John Doe',
-            'email'                 => 'john@example.com',
-            'password'              => 'Password1!',
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'Password1!',
             'password_confirmation' => 'Password1!',
         ]);
 
@@ -30,9 +30,9 @@ class AuthTest extends TestCase
         User::factory()->create(['email' => 'john@example.com']);
 
         $response = $this->postJson('/api/register', [
-            'name'                  => 'John Doe',
-            'email'                 => 'john@example.com',
-            'password'              => 'Password1!',
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'Password1!',
             'password_confirmation' => 'Password1!',
         ]);
 
@@ -43,12 +43,12 @@ class AuthTest extends TestCase
     public function test_login_returns_token_with_valid_credentials(): void
     {
         User::factory()->create([
-            'email'    => 'john@example.com',
+            'email' => 'john@example.com',
             'password' => bcrypt('Password1!'),
         ]);
 
         $response = $this->postJson('/api/login', [
-            'email'    => 'john@example.com',
+            'email' => 'john@example.com',
             'password' => 'Password1!',
         ]);
 
@@ -61,7 +61,7 @@ class AuthTest extends TestCase
         User::factory()->create(['email' => 'john@example.com']);
 
         $response = $this->postJson('/api/login', [
-            'email'    => 'john@example.com',
+            'email' => 'john@example.com',
             'password' => 'wrong-password',
         ]);
 
@@ -71,7 +71,7 @@ class AuthTest extends TestCase
 
     public function test_logout_revokes_token(): void
     {
-        $user  = User::factory()->create();
+        $user = User::factory()->create();
         $token = $user->createToken('auth-token')->plainTextToken;
 
         $response = $this->withToken($token)->postJson('/api/logout');
@@ -82,7 +82,7 @@ class AuthTest extends TestCase
 
     public function test_me_returns_authenticated_user(): void
     {
-        $user  = User::factory()->create();
+        $user = User::factory()->create();
         $token = $user->createToken('auth-token')->plainTextToken;
 
         $response = $this->withToken($token)->getJson('/api/me');
@@ -100,7 +100,7 @@ class AuthTest extends TestCase
 
     public function test_unverified_user_blocked_from_verified_routes(): void
     {
-        $user  = User::factory()->unverified()->create();
+        $user = User::factory()->unverified()->create();
         $token = $user->createToken('auth-token')->plainTextToken;
 
         $response = $this->withToken($token)->getJson('/api/account');
@@ -110,7 +110,7 @@ class AuthTest extends TestCase
 
     public function test_verified_user_can_access_verified_routes(): void
     {
-        $user  = User::factory()->create();
+        $user = User::factory()->create();
         $token = $user->createToken('auth-token')->plainTextToken;
 
         $response = $this->withToken($token)->getJson('/api/account');
