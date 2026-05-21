@@ -42,6 +42,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 );
             }
 
+            error_log('[auth-api] ' . get_class($e) . ': ' . $e->getMessage());
+
             return response()->json(
                 ['message' => config('app.debug') ? $e->getMessage() : 'Server Error.'],
                 500
